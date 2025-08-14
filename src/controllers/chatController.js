@@ -21,13 +21,21 @@ export const iniciarChat = async (req, res) => {
       'ja-JP': { code: 'ja', stopSequence: ['。'], langSpeech: 'ja-JP', maxTokens: 80 },
     };
 
-    // Detectar idioma del mensaje con mayor confianza
-    const detectedLang = franc(message, { minLength: 3, whitelist: Object.values(langMap).map(l => l.code) }) || 'es';
+    // Detectar idioma del mensaje
+    const detectedLang = franc(message, { 
+      minLength: 3, 
+      whitelist: Object.values(langMap).map(l => l.code) 
+    }) || 'en'; // Fallback a inglés en lugar de español
+
     // Priorizar idioma detectado si es soportado, de lo contrario usar lang del frontend
     const langConfig = Object.values(langMap).find(l => l.code === detectedLang) || langMap[lang] || langMap['es-CL'];
     
     if (!langMap[lang]) {
       console.warn(`Idioma no soportado en frontend: ${lang}. Usando ${langConfig.langSpeech} basado en mensaje.`);
+    }
+
+    if (detectedLang !== langMap[lang]?.code) {
+      console.log(`Idioma detectado (${detectedLang}) diferente de seleccionado (${langMap[lang]?.code || lang}). Usando ${langConfig.code}.`);
     }
 
     // Prompt optimizado
