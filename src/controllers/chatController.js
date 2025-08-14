@@ -1,5 +1,7 @@
 import { model } from '../config/gemini.js';
 
+import { franc } from 'franc'; // Opcional, para detección de idioma (requiere `npm install franc franc-min`)
+
 export const iniciarChat = async (req, res) => {
   const { message, lang = 'es-CL' } = req.body; // Idioma por defecto: español (Chile)
 
@@ -20,13 +22,13 @@ export const iniciarChat = async (req, res) => {
       'ja-JP': { code: 'ja', stopSequence: ['。'], langSpeech: 'ja-JP', maxTokens: 80 },
     };
 
-    // Verificar si el idioma es soportado
-    const langConfig = langMap[lang] || langMap['es-CL'];
-    if (!langMap[lang]) {
-      console.warn(`Idioma no soportado: ${lang}. Usando es-CL como fallback.`);
-    }
+    // Detectar idioma del mensaje (usando franc, opcional)
+    const detectedLang = franc(message, { minLength: 10 }) || 'es';
+    const langConfig = langMap[lang] && langMap[lang].code === detectedLang
+      ? langMap[lang]
+      : Object.values(langMap).find(l => l.code === detectedLang) || langMap['es-CL'];
 
-    // Prompt optimizado para respuestas breves y completas
+    // Prompt optimizado para respuestas breves y completas en el idioma detectado
     const prompt = `Eres un asistente de voz. Responde en ${langConfig.code} en un máximo de 2 oraciones cortas, claras y completas, sin usar formato como negritas, cursivas, listas o emojis: ${message}`;
 
     // Configuración de la generación con límite de tokens y stopSequences
@@ -34,8 +36,8 @@ export const iniciarChat = async (req, res) => {
       prompt,
       {
         generationConfig: {
-          maxOutputTokens: langConfig.maxTokens, // Ajustado por idioma
-          stopSequences: langConfig.stopSequence, // Secuencias de parada según idioma
+          maxOutputTokens: langConfig.maxTokens,
+          stopSequences: langConfig.stopSequence,
         }
       }
     );
