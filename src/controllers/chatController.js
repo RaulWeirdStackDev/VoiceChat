@@ -23,19 +23,19 @@ export const iniciarChat = async (req, res) => {
 
     // Detectar idioma del mensaje
     const detectedLang = franc(message, { 
-      minLength: 3, 
-      whitelist: Object.values(langMap).map(l => l.code) 
-    }) || 'en'; // Fallback a inglés en lugar de español
+      minLength: 2, // Reducido para mensajes cortos
+      whitelist: Object.values(langMap).map(l => l.code),
+      only: ['en', 'es', 'fr', 'pt', 'de', 'it', 'ja'] // Reforzar idiomas soportados
+    });
 
-    // Priorizar idioma detectado si es soportado, de lo contrario usar lang del frontend
-    const langConfig = Object.values(langMap).find(l => l.code === detectedLang) || langMap[lang] || langMap['es-CL'];
-    
-    if (!langMap[lang]) {
-      console.warn(`Idioma no soportado en frontend: ${lang}. Usando ${langConfig.langSpeech} basado en mensaje.`);
-    }
-
-    if (detectedLang !== langMap[lang]?.code) {
-      console.log(`Idioma detectado (${detectedLang}) diferente de seleccionado (${langMap[lang]?.code || lang}). Usando ${langConfig.code}.`);
+    // Priorizar idioma detectado, con fallback al idioma del frontend
+    let langConfig;
+    if (detectedLang && Object.values(langMap).some(l => l.code === detectedLang)) {
+      langConfig = Object.values(langMap).find(l => l.code === detectedLang);
+      console.log(`Idioma detectado: ${detectedLang}, usando ${langConfig.langSpeech}`);
+    } else {
+      langConfig = langMap[lang] || langMap['es-CL'];
+      console.log(`Idioma no detectado o no soportado (${detectedLang}). Usando frontend lang: ${langConfig.langSpeech}`);
     }
 
     // Prompt optimizado
