@@ -1,7 +1,3 @@
-import { model } from '../config/gemini.js';
-
-import { franc } from 'franc'; // Requiere `npm install franc franc-min`
-
 export const iniciarChat = async (req, res) => {
   const { message, lang = 'es-CL' } = req.body;
 
@@ -10,36 +6,24 @@ export const iniciarChat = async (req, res) => {
   }
 
   try {
-    // Mapa de idiomas basado en LanguageSelect
+    // Mapa de idiomas para Web Speech API y parámetros por idioma
     const langMap = {
-      'es-CL': { code: 'es', stopSequence: ['.'], langSpeech: 'es-CL', maxTokens: 100 },
-      'en-US': { code: 'en', stopSequence: ['.'], langSpeech: 'en-US', maxTokens: 100 },
-      'fr-FR': { code: 'fr', stopSequence: ['.'], langSpeech: 'fr-FR', maxTokens: 100 },
-      'pt-BR': { code: 'pt', stopSequence: ['.'], langSpeech: 'pt-BR', maxTokens: 100 },
-      'de-DE': { code: 'de', stopSequence: ['.'], langSpeech: 'de-DE', maxTokens: 100 },
-      'it-IT': { code: 'it', stopSequence: ['.'], langSpeech: 'it-IT', maxTokens: 100 },
-      'ja-JP': { code: 'ja', stopSequence: ['。'], langSpeech: 'ja-JP', maxTokens: 80 },
+      'es-CL': { stopSequence: ['.'], langSpeech: 'es-CL', maxTokens: 100 },
+      'en-US': { stopSequence: ['.'], langSpeech: 'en-US', maxTokens: 100 },
+      'fr-FR': { stopSequence: ['.'], langSpeech: 'fr-FR', maxTokens: 100 },
+      'pt-BR': { stopSequence: ['.'], langSpeech: 'pt-BR', maxTokens: 100 },
+      'de-DE': { stopSequence: ['.'], langSpeech: 'de-DE', maxTokens: 100 },
+      'it-IT': { stopSequence: ['.'], langSpeech: 'it-IT', maxTokens: 100 },
+      'ja-JP': { stopSequence: ['。'], langSpeech: 'ja-JP', maxTokens: 80 },
     };
 
-    // Detectar idioma del mensaje
-    const detectedLang = franc(message, { 
-      minLength: 2, // Reducido para mensajes cortos
-      whitelist: Object.values(langMap).map(l => l.code),
-      only: ['en', 'es', 'fr', 'pt', 'de', 'it', 'ja'] // Reforzar idiomas soportados
-    });
-
-    // Priorizar idioma detectado, con fallback al idioma del frontend
-    let langConfig;
-    if (detectedLang && Object.values(langMap).some(l => l.code === detectedLang)) {
-      langConfig = Object.values(langMap).find(l => l.code === detectedLang);
-      console.log(`Idioma detectado: ${detectedLang}, usando ${langConfig.langSpeech}`);
-    } else {
-      langConfig = langMap[lang] || langMap['es-CL'];
-      console.log(`Idioma no detectado o no soportado (${detectedLang}). Usando frontend lang: ${langConfig.langSpeech}`);
+    const langConfig = langMap[lang] || langMap['es-CL'];
+    if (!langMap[lang]) {
+      console.warn(`Idioma no soportado: ${lang}. Usando es-CL como fallback.`);
     }
 
-    // Prompt optimizado
-    const prompt = `Eres un asistente de voz. Responde en ${langConfig.code} en un máximo de 2 oraciones cortas, claras y completas, sin usar formato como negritas, cursivas, listas o emojis: ${message}`;
+    // Prompt sin especificar idioma, dejando que Gemini lo detecte
+    const prompt = `Eres un asistente de voz. Responde en un máximo de 2 oraciones cortas, claras y completas, sin usar formato como negritas, cursivas, listas o emojis: ${message}`;
 
     // Configuración de la generación
     const result = await model.generateContent(
@@ -59,7 +43,7 @@ export const iniciarChat = async (req, res) => {
 
     // Validar respuesta vacía o corta
     if (!responseText || responseText.length < 5) {
-      responseText = langConfig.code === 'es' ? 'Lo siento, no entendí. ¿Puedes repetir?' : 'Sorry, I didn’t understand. Please repeat.';
+      responseText = langConfig.langSpeech.startsWith('es') ? 'Lo siento, no entendí. ¿Puedes repetir?' : 'Sorry, I didn’t understand. Please repeat.';
     }
 
     // Devolver respuesta con idioma para Web Speech API
