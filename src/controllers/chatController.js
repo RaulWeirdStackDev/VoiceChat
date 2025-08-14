@@ -1,17 +1,16 @@
 import { model } from '../config/gemini.js';
 
-import { franc } from 'franc'; // Opcional, para detección de idioma (requiere `npm install franc franc-min`)
+import { franc } from 'franc'; // Requiere `npm install franc franc-min`
 
 export const iniciarChat = async (req, res) => {
-  const { message, lang = 'es-CL' } = req.body; // Idioma por defecto: español (Chile)
+  const { message, lang = 'es-CL' } = req.body;
 
-  // Validar que se haya enviado un mensaje
   if (!message) {
     return res.status(400).json({ error: 'El mensaje es requerido' });
   }
 
   try {
-    // Mapa de idiomas basado en LanguageSelect del frontend
+    // Mapa de idiomas basado en LanguageSelect
     const langMap = {
       'es-CL': { code: 'es', stopSequence: ['.'], langSpeech: 'es-CL', maxTokens: 100 },
       'en-US': { code: 'en', stopSequence: ['.'], langSpeech: 'en-US', maxTokens: 100 },
@@ -22,16 +21,19 @@ export const iniciarChat = async (req, res) => {
       'ja-JP': { code: 'ja', stopSequence: ['。'], langSpeech: 'ja-JP', maxTokens: 80 },
     };
 
-    // Detectar idioma del mensaje (usando franc, opcional)
-    const detectedLang = franc(message, { minLength: 10 }) || 'es';
-    const langConfig = langMap[lang] && langMap[lang].code === detectedLang
-      ? langMap[lang]
-      : Object.values(langMap).find(l => l.code === detectedLang) || langMap['es-CL'];
+    // Detectar idioma del mensaje con mayor confianza
+    const detectedLang = franc(message, { minLength: 3, whitelist: Object.values(langMap).map(l => l.code) }) || 'es';
+    // Priorizar idioma detectado si es soportado, de lo contrario usar lang del frontend
+    const langConfig = Object.values(langMap).find(l => l.code === detectedLang) || langMap[lang] || langMap['es-CL'];
+    
+    if (!langMap[lang]) {
+      console.warn(`Idioma no soportado en frontend: ${lang}. Usando ${langConfig.langSpeech} basado en mensaje.`);
+    }
 
-    // Prompt optimizado para respuestas breves y completas en el idioma detectado
+    // Prompt optimizado
     const prompt = `Eres un asistente de voz. Responde en ${langConfig.code} en un máximo de 2 oraciones cortas, claras y completas, sin usar formato como negritas, cursivas, listas o emojis: ${message}`;
 
-    // Configuración de la generación con límite de tokens y stopSequences
+    // Configuración de la generación
     const result = await model.generateContent(
       prompt,
       {
@@ -44,15 +46,15 @@ export const iniciarChat = async (req, res) => {
 
     let responseText = result.response.text();
 
-    // Post-procesamiento para limitar a un máximo de 2 oraciones
+    // Post-procesamiento para limitar a 2 oraciones
     responseText = limitToSentences(responseText, 2, langConfig.stopSequence);
 
-    // Validar respuesta vacía o demasiado corta
+    // Validar respuesta vacía o corta
     if (!responseText || responseText.length < 5) {
       responseText = langConfig.code === 'es' ? 'Lo siento, no entendí. ¿Puedes repetir?' : 'Sorry, I didn’t understand. Please repeat.';
     }
 
-    // Devolver la respuesta con el idioma para Web Speech API
+    // Devolver respuesta con idioma para Web Speech API
     res.json({ reply: responseText, lang: langConfig.langSpeech });
   } catch (error) {
     console.error('Error en el controlador:', error);
@@ -60,7 +62,6 @@ export const iniciarChat = async (req, res) => {
   }
 };
 
-// Función para limitar la respuesta a un número máximo de oraciones
 function limitToSentences(text, maxSentences, stopSequences) {
   const sentenceEnd = stopSequences.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   const regex = new RegExp(`[^${sentenceEnd}]+[${sentenceEnd}]+`, 'g');
