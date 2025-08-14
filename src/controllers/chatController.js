@@ -4,8 +4,8 @@ function cortarAlFinalDeOracion(texto, limite) {
   if (texto.length <= limite) return texto;
 
   const subTexto = texto.slice(0, limite);
-  // Incluye signos de cierre en latín y en japonés/chino
-  const regex = /[.?!。！？](?=\s|$)/g;
+  // Regex mejorado: ignora enumeraciones
+  const regex = /(?<!\d)(?<!\(\d)(?<!\([a-zA-Z])([.?!。！？])(?=\s|$)/g;
   let ultimaCoincidencia = -1;
   let match;
 
