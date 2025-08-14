@@ -3,19 +3,20 @@ import { model } from '../config/gemini.js';
 function cortarAlFinalDeOracion(texto, limite) {
   if (texto.length <= limite) return texto;
 
-  const subTexto = texto.slice(0, limite);
-  // Regex mejorado: ignora enumeraciones
-  const regex = /(?<!\d)(?<!\(\d)(?<!\([a-zA-Z])([.?!。！？])(?=\s|$)/g;
-  let ultimaCoincidencia = -1;
-  let match;
+  // Cortamos inicialmente al límite
+  const subTexto = texto.slice(limite);
 
-  while ((match = regex.exec(subTexto)) !== null) {
-    ultimaCoincidencia = match.index + 1; // incluir el signo
+  // Regex de fin de oración (latín, japonés, chino)
+  const regex = /[.?!。！？](?=\s|$)/;
+  const match = regex.exec(subTexto);
+
+  if (match) {
+    // +1 para incluir el signo de puntuación
+    return texto.slice(0, limite + match.index + 1);
+  } else {
+    // Si no hay fin de oración después, devolvemos todo
+    return texto;
   }
-
-  return ultimaCoincidencia !== -1
-    ? subTexto.slice(0, ultimaCoincidencia)
-    : subTexto;
 }
 
 export const iniciarChat = async (req, res) => {
