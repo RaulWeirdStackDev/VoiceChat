@@ -1,6 +1,3 @@
-import { User } from "../models/authModel.js";
-
-// POST /api/auth/register
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/authModel.js";
