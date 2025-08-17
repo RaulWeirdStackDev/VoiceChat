@@ -1,14 +1,14 @@
 {
   "name": "voice-chat",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend for VoiceChat, a voice chat web application using Gemini AI and MongoDB.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Raúl Rodríguez Clavero",
   "license": "ISC",
   "type": "module",
   "dependencies": {
